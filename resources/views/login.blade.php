@@ -2,7 +2,7 @@
 @section('content')
     <section>
         <div class="d-flex justify-content-center align-items-center" style="height: 100vh">
-            <div class="border border-success rounded-4 p-3" style="width: min(95%, 300px); height: fit-content">
+            <div class="border border-success rounded-4 p-3" style="width: min(96%, 300px); height: fit-content">
                 <div class="d-flex justify-content-center">
                     <img src="{{asset('img/logo.png')}}" width="150px" alt="">
                 </div>
