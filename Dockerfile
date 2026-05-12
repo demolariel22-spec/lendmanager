@@ -1,7 +1,7 @@
 FROM php:8.4-cli
 
 WORKDIR /var/www/html
-
+ 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libpng-dev \
     libonig-dev \
-    libxml2-dev
+    libxml2-dev \
+    libpq-dev \
+    && docker-php-ext-install pdo_pgsql pgsql
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_mysql mbstring zip
