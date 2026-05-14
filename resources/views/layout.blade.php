@@ -14,7 +14,7 @@
     @yield('style')
 </head>
 <body class="p-0 m-0" style="height: 100vh">
-    <div class="position-absolute z-3 top-0 end-0">
+    <div class="position-absolute z-3 bottom-0 start-0">
         @if ($errors->any())
             <div class="alert alert-danger alert-dismissible" role="alert">
                 <ul>

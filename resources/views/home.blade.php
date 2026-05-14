@@ -66,12 +66,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                     <div class="modal-body">
-                        <div class="d-flex">
+                        <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center">
                             <h3 id="view-utang-person-name">Name</h3>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="show-paid-utang">
+                                <label class="form-check-label" for="show-paid-utang">Show paid utang</label>
+                            </div>
                         </div>
-                        <div class="table-group table-responsive" style="max-height: 60vh">
-                            <table class="table table-hover">
-                                <thead>
+                    </div>
+                    <div class="table-group table-responsive" style="max-height: 60vh">
+                        <table class="table table-hover">
+                            <thead>
                                     <tr>
                                         <th>Item</th>
                                         <th>Quantity</th>
@@ -160,10 +166,12 @@
         <div class="mt-2">
             <div class="d-flex justify-content-between p-2">
                 <h6>User : {{ Auth::user()->name }}</h6>
-                <h5 class="text-muted">Dept Management | POS</h5>
                 <div class="">
                     <button class="btn btn-secondary py-1" onclick="logout()">Logout</button>
                 </div>
+            </div>
+            <div class="d-flex justify-content-center">
+                <h5 class="text-muted">Dept Management | POS</h5>
             </div>
             <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">   
                 <li class="nav-item" role="presentation">
@@ -291,7 +299,10 @@
     const viewUtangModal = document.getElementById('view-utang')
     const viewUtangPersonName = document.getElementById('view-utang-person-name')
     const viewUtangTable = document.getElementById('view-utang-table')
+    const showPaidUtangCheckbox = document.getElementById('show-paid-utang')
     let personsData = []
+    let currentUtangData = []
+    let showPaidUtang = false
 
     function renderPersons(){
         const search = personSearch.value.trim().toLowerCase()
@@ -344,11 +355,17 @@
     loadPersons()
     personSearch.addEventListener('input', renderPersons)
 
-    function renderUtangRows(data){
-        if(!data.length){
+    function renderUtangTable(){
+        const filteredData = currentUtangData.filter(utang => showPaidUtang || utang.status !== 'paid')
+
+        if(!filteredData.length){
+            const message = currentUtangData.length
+                ? 'No unpaid utang found. Enable "Show paid utang" to view paid items.'
+                : 'No utang found.'
+
             viewUtangTable.innerHTML = `
                 <tr>
-                    <td class="text-center text-muted" colspan="6">No utang found.</td>
+                    <td class="text-center text-muted" colspan="6">${message}</td>
                 </tr>
             `
             return
@@ -356,7 +373,7 @@
 
         viewUtangTable.innerHTML = ''
 
-        data.forEach(utang => {
+        filteredData.forEach(utang => {
             const price = formatPeso(utang.price)
             const total = formatPeso(utang.total)
             const isPaid = utang.status === 'paid'
@@ -376,6 +393,11 @@
                 </tr>
             `
         })
+    }
+
+    function renderUtangRows(data){
+        currentUtangData = data || []
+        renderUtangTable()
     }
 
     function loadPersonUtang(personId){
@@ -413,7 +435,14 @@
         const personId = button.getAttribute('data-person-id')
         viewUtangPersonName.textContent = button.getAttribute('data-person-name')
         viewUtangModal.setAttribute('data-person-id', personId)
+        showPaidUtang = false
+        showPaidUtangCheckbox.checked = false
         loadPersonUtang(personId)
+    })
+
+    showPaidUtangCheckbox.addEventListener('change', function(){
+        showPaidUtang = this.checked
+        renderUtangTable()
     })
 
     viewUtangTable.addEventListener('click', function(event){
