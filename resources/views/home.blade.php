@@ -67,18 +67,19 @@
                 </div>
                     <div class="modal-body">
                         <div class="d-flex flex-column gap-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h3 id="view-utang-person-name">Name</h3>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="show-paid-utang">
-                                <label class="form-check-label" for="show-paid-utang">Show paid utang</label>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h3 id="view-utang-person-name">Name</h3>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="show-paid-utang">
+                                    <label class="form-check-label" for="show-paid-utang">Show paid utang</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="table-group table-responsive" style="max-height: 60vh">
-                        <table class="table table-hover">
-                            <thead>
+                        <div class="table-group table-responsive" style="max-height: 60vh">
+                            <table class="table table-hover">
+                                <thead>
                                     <tr>
+                                        <th class="text-center">Select</th>
                                         <th>Item</th>
                                         <th>Quantity</th>
                                         <th>Price</th>
@@ -89,11 +90,21 @@
                                 </thead>
                                 <tbody id="view-utang-table">
                                     <tr>
-                                        <td class="text-center" colspan="6">
+                                        <td class="text-center" colspan="7">
                                             Select a person to view utang.
                                         </td>
                                     </tr>
                                 </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                                <button type="button" class="btn btn-primary btn-sm" id="toggle-select-pay-btn">Select items to pay</button>
+                                                <span id="selected-utang-total" class="fw-semibold">Selected total: P 0.00</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
@@ -300,9 +311,13 @@
     const viewUtangPersonName = document.getElementById('view-utang-person-name')
     const viewUtangTable = document.getElementById('view-utang-table')
     const showPaidUtangCheckbox = document.getElementById('show-paid-utang')
+    const toggleSelectPayBtn = document.getElementById('toggle-select-pay-btn')
+    const selectedUtangTotalLabel = document.getElementById('selected-utang-total')
     let personsData = []
     let currentUtangData = []
     let showPaidUtang = false
+    let selectionMode = false
+    let selectedUtangTotalAmount = 0
 
     function renderPersons(){
         const search = personSearch.value.trim().toLowerCase()
@@ -355,6 +370,29 @@
     loadPersons()
     personSearch.addEventListener('input', renderPersons)
 
+    function updateSelectedTotal(){
+        selectedUtangTotalAmount = Array.from(viewUtangTable.querySelectorAll('.select-utang-checkbox:checked'))
+            .reduce((sum, checkbox) => sum + parseFloat(checkbox.dataset.total || 0), 0)
+        selectedUtangTotalLabel.textContent = `Selected total: ${formatPeso(selectedUtangTotalAmount)}`
+    }
+
+    function setSelectionMode(active){
+        selectionMode = active
+        toggleSelectPayBtn.textContent = active ? 'Pay selected' : 'Select items to pay'
+
+        const checkboxes = viewUtangTable.querySelectorAll('.select-utang-checkbox')
+        checkboxes.forEach(checkbox => {
+            checkbox.classList.toggle('d-none', !active)
+            checkbox.disabled = !active || checkbox.dataset.paid === 'true'
+        })
+
+        if(!active){
+            selectedUtangTotalAmount = 0
+            selectedUtangTotalLabel.textContent = `Selected total: ${formatPeso(0)}`
+            checkboxes.forEach(checkbox => checkbox.checked = false)
+        }
+    }
+
     function renderUtangTable(){
         const filteredData = currentUtangData.filter(utang => showPaidUtang || utang.status !== 'paid')
 
@@ -365,7 +403,7 @@
 
             viewUtangTable.innerHTML = `
                 <tr>
-                    <td class="text-center text-muted" colspan="6">${message}</td>
+                    <td class="text-center text-muted" colspan="7">${message}</td>
                 </tr>
             `
             return
@@ -379,7 +417,10 @@
             const isPaid = utang.status === 'paid'
 
             viewUtangTable.innerHTML += `
-                <tr>
+                <tr class="${isPaid ? 'table-secondary' : ''}">
+                    <td class="text-center align-middle">
+                        <input type="checkbox" class="form-check-input select-utang-checkbox d-none" value="${utang.id}" data-total="${utang.total}" data-paid="${isPaid}">
+                    </td>
                     <td>${utang.item}</td>
                     <td>${utang.qty}</td>
                     <td>${price}</td>
@@ -393,6 +434,8 @@
                 </tr>
             `
         })
+
+        setSelectionMode(selectionMode)
     }
 
     function renderUtangRows(data){
@@ -400,10 +443,42 @@
         renderUtangTable()
     }
 
+    async function paySelectedUtang(ids){
+        const originalText = toggleSelectPayBtn.textContent
+        toggleSelectPayBtn.disabled = true
+        toggleSelectPayBtn.textContent = 'Processing...'
+
+        try {
+            for(const id of ids){
+                const response = await fetch(`pay-utang/${id}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                })
+
+                if(!response.ok){
+                    throw new Error('Unable to pay selected utang.')
+                }
+            }
+
+            setSelectionMode(false)
+            loadPersonUtang(viewUtangModal.getAttribute('data-person-id'))
+            loadPersons()
+        } catch(err) {
+            console.error(err)
+            alert('Unable to complete selected utang payment.')
+        } finally {
+            toggleSelectPayBtn.disabled = false
+            toggleSelectPayBtn.textContent = originalText
+        }
+    }
+
     function loadPersonUtang(personId){
         viewUtangTable.innerHTML = `
             <tr>
-                <td class="text-center" colspan="6">
+                <td class="text-center" colspan="7">
                     <button class="btn btn-primary" type="button" disabled>
                         <span class="spinner-grow spinner-grow-sm" aria-hidden="true"></span>
                         <span role="status">Loading...</span>
@@ -419,7 +494,7 @@
                 console.error(err)
                 viewUtangTable.innerHTML = `
                     <tr>
-                        <td class="text-center text-danger" colspan="6">Unable to load utang.</td>
+                        <td class="text-center text-danger" colspan="7">Unable to load utang.</td>
                     </tr>
                 `
             })
@@ -437,12 +512,40 @@
         viewUtangModal.setAttribute('data-person-id', personId)
         showPaidUtang = false
         showPaidUtangCheckbox.checked = false
+        setSelectionMode(false)
         loadPersonUtang(personId)
     })
 
     showPaidUtangCheckbox.addEventListener('change', function(){
         showPaidUtang = this.checked
         renderUtangTable()
+    })
+
+    toggleSelectPayBtn.addEventListener('click', function(){
+        if(!selectionMode){
+            setSelectionMode(true)
+            return
+        }
+
+        const selectedCheckboxes = Array.from(viewUtangTable.querySelectorAll('.select-utang-checkbox:checked'))
+        if(!selectedCheckboxes.length){
+            alert('Please select at least one unpaid utang to pay.')
+            return
+        }
+
+        const selectedIds = selectedCheckboxes.map(checkbox => checkbox.value)
+        const confirmMessage = `Pay ${selectedIds.length} item(s) totaling ${formatPeso(selectedUtangTotalAmount)}?`
+        if(!confirm(confirmMessage)){
+            return
+        }
+
+        paySelectedUtang(selectedIds)
+    })
+
+    viewUtangTable.addEventListener('change', function(event){
+        if(event.target.matches('.select-utang-checkbox')){
+            updateSelectedTotal()
+        }
     })
 
     viewUtangTable.addEventListener('click', function(event){
