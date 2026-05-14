@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Dept Management|POS</title>
-    <link rel="stylesheet" href="{{asset('bootstrap/bootstrap.min.css')}}">
-    <link rel="stylesheet" href="{{asset('css/style.css')}}">
-    <link rel="icon" href="{{asset('img/logo.png')}}">
+    <link rel="stylesheet" href="{{asset('public/bootstrap/bootstrap.min.css')}}">
+    <link rel="stylesheet" href="{{asset('public/css/style.css')}}">
+    <link rel="icon" href="{{asset('public/img/logo.png')}}">
     <style>
 
     </style>
